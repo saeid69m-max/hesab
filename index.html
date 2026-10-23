@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#176b58">
+<title>حساب‌یار | دخل‌وخرج و اقساط</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--green:#176b58;--bg:#f4f7f5;--card:#fff;--ink:#17332c;--muted:#667a73;--line:#dce7e1;--red:#b42318;--gold:#946200}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Tahoma,Arial,sans-serif;font-size:15px;line-height:1.7}
+header{background:var(--green);color:white;padding:18px 16px 16px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px #0001}
+header h1{margin:0;font-size:22px}header p{margin:3px 0 0;font-size:12px;opacity:.9}
+main{max-width:850px;margin:auto;padding:14px 12px 90px}
+nav{display:flex;gap:7px;overflow:auto;padding:4px 0 12px}
+nav button{white-space:nowrap;border:1px solid var(--line);background:white;color:var(--ink);padding:9px 13px;border-radius:12px;font:inherit}
+nav button.active{background:var(--green);color:white;border-color:var(--green)}
+.panel{display:none}.panel.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.card,.box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px;box-shadow:0 2px 7px #17332c08}
+.metric{font-size:12px;color:var(--muted)}.amount{font-weight:bold;font-size:20px;margin-top:4px;overflow-wrap:anywhere}
+h2{font-size:18px;margin:18px 0 9px}h3{font-size:15px;margin:0 0 8px}
+form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+input,select,textarea{width:100%;min-width:0;padding:11px;border:1px solid #cbd9d2;border-radius:10px;background:white;color:var(--ink);font:inherit;font-size:14px}
+textarea{grid-column:1/-1;min-height:65px}
+.full{grid-column:1/-1}
+button.primary{background:var(--green);color:white;border:0;border-radius:11px;padding:11px 14px;font:inherit;font-weight:bold}
+button.secondary{background:white;color:var(--green);border:1px solid var(--green);border-radius:10px;padding:8px 11px;font:inherit}
+button.danger{background:#fff1f0;color:var(--red);border:1px solid #ffd0cc;border-radius:9px;padding:6px 9px;font:inherit}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.item{padding:12px 0;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}
+.item-title{font-weight:bold}.small{font-size:12px;color:var(--muted)}.pill{font-size:11px;padding:3px 8px;border-radius:99px;background:#e7f4ed;color:var(--green)}
+.pill.warn{background:#fff2d5;color:var(--gold)}.pill.late{background:#ffebe9;color:var(--red)}
+.empty{color:var(--muted);text-align:center;padding:20px 5px}
+.note{font-size:12px;color:var(--muted);background:#edf4f0;padding:10px;border-radius:10px;margin:10px 0}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.progress{height:7px;background:#e6eee9;border-radius:99px;overflow:hidden;margin-top:8px}.progress span{display:block;height:100%;background:var(--green)}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
+@media(min-width:620px){.cards{grid-template-columns:repeat(4,minmax(0,1fr))}main{padding-top:20px}}
+</style>
+</head>
+<body>
+<header><h1>حساب‌یار</h1><p>مدیریت اقساط، درآمد و مخارج ماهیانه · تومان</p></header>
+<main>
+<nav id="tabs">
+<button class="active" data-tab="home">خلاصه ماه</button><button data-tab="expense">ثبت مخارج</button><button data-tab="income">ثبت درآمد</button><button data-tab="installments">اقساط</button><button data-tab="report">گزارش ماهیانه</button><button data-tab="settings">پشتیبان‌گیری و یادآوری</button>
+</nav>
+<section id="home" class="panel active">
+<div class="row"><h2 style="margin-top:4px">خلاصه وضعیت</h2><label style="max-width:180px">ماه گزارش<select id="homeMonth"></select></label></div>
+<div class="cards">
+<div class="card"><div class="metric">درآمد ثبت‌شده</div><div class="amount" id="mIncome">۰</div></div>
+<div class="card"><div class="metric">مخارج ثبت‌شده</div><div class="amount" id="mExpense">۰</div></div>
+<div class="card"><div class="metric">اقساط پرداخت‌شده</div><div class="amount" id="mPaid">۰</div></div>
+<div class="card"><div class="metric">مانده ماه (درآمد − مخارج − اقساط)</div><div class="amount" id="mBalance">۰</div></div>
+</div>
+<h2>اقساط نزدیک به سررسید</h2><div class="box" id="upcoming"></div>
+<h2>آخرین ثبت‌ها</h2><div class="box" id="recent"></div>
+</section>
+<section id="expense" class="panel">
+<h2>ثبت مخارج</h2>
+<div class="box"><form id="expenseForm">
+<label>عنوان هزینه<input required name="title" placeholder="مثلاً خرید خانه"></label>
+<label>مبلغ (تومان)<input required name="amount" type="number" min="1" step="1" placeholder="مثلاً 250000"></label>
+<label>تاریخ<input required name="date" type="date"></label>
+<label>دسته‌بندی<select name="category"><option>خوراک</option><option>رفت‌وآمد و سوخت</option><option>قبض و خدمات</option><option>درمان</option><option>خرید خانه</option><option>آموزش</option><option>تفریح</option><option>قسط</option><option>سایر</option></select></label>
+<label>روش پرداخت<select name="method"><option>نقدی</option><option>کارت</option><option>انتقال بانکی</option><option>سایر</option></select></label>
+<label>توضیحات<input name="note" placeholder="اختیاری"></label>
+<button class="primary full" type="submit">ذخیره هزینه</button>
+</form></div>
+<h2>هزینه‌های ثبت‌شده</h2><div class="box"><label>نمایش ماه<select id="expenseMonth"></select></label><div id="expenseList"></div></div>
+</section>
+<section id="income" class="panel">
+<h2>ثبت درآمد</h2><div class="box"><form id="incomeForm">
+<label>عنوان درآمد<input required name="title" placeholder="مثلاً حقوق ماهیانه"></label>
+<label>مبلغ (تومان)<input required name="amount" type="number" min="1" step="1"></label>
+<label>تاریخ دریافت<input required name="date" type="date"></label>
+<label>نوع درآمد<select name="category"><option>حقوق</option><option>درآمد جانبی</option><option>فروش</option><option>هدیه</option><option>سایر</option></select></label>
+<label class="full">توضیحات<input name="note" placeholder="اختیاری"></label>
+<button class="primary full" type="submit">ذخیره درآمد</button></form></div>
+<h2>درآمدهای ثبت‌شده</h2><div class="box"><label>نمایش ماه<select id="incomeMonth"></select></label><div id="incomeList"></div></div>
+</section>
+<section id="installments" class="panel">
+<h2>ثبت قرارداد قسطی یا بدهی</h2>
+<div class="box"><form id="loanForm">
+<label>عنوان قسط / بدهی<input required name="title" placeholder="مثلاً قسط گوشی"></label>
+<label>مبلغ هر قسط (تومان)<input required name="amount" type="number" min="1" step="1"></label>
+<label>تعداد کل اقساط<input required name="count" type="number" min="1" max="600" step="1" value="12"></label>
+<label>تاریخ اولین سررسید<input required name="firstDate" type="date"></label>
+<label>فاصله اقساط<select name="frequency"><option value="monthly">ماهانه</option><option value="weekly">هفتگی</option><option value="biweekly">هر دو هفته</option></select></label>
+<label>یادآوری چند روز قبل؟<select name="remind"><option value="0">همان روز</option><option value="1">۱ روز قبل</option><option value="3" selected>۳ روز قبل</option><option value="7">۷ روز قبل</option></select></label>
+<label class="full">توضیحات<input name="note" placeholder="نام فروشگاه، وام‌دهنده و..."></label>
+<button class="primary full" type="submit">ثبت اقساط</button></form>
+<div class="note">برنامه برای هر قرارداد، سررسیدهای اقساط را محاسبه می‌کند. اعلان‌های زمان‌بندی‌شده در نسخه وب تضمین نمی‌شوند؛ برای بررسی روزانه باید برنامه را باز کنی یا یادآوری تقویم گوشی را هم فعال کنی.</div></div>
+<h2>اقساط من</h2><div class="box" id="loanList"></div>
+<h2>سررسیدهای اقساط</h2><div class="box" id="scheduleList"></div>
+</section>
+<section id="report" class="panel">
+<h2>گزارش ماهیانه</h2><div class="box">
+<label>انتخاب ماه<select id="reportMonth"></select></label>
+<div class="cards" style="margin-top:12px">
+<div class="card"><div class="metric">کل درآمد</div><div class="amount" id="rIncome">۰</div></div>
+<div class="card"><div class="metric">کل هزینه‌های عادی</div><div class="amount" id="rExpense">۰</div></div>
+<div class="card"><div class="metric">اقساط پرداخت‌شده</div><div class="amount" id="rPaid">۰</div></div>
+<div class="card"><div class="metric">مانده</div><div class="amount" id="rBalance">۰</div></div>
+</div><h3 style="margin-top:18px">مخارج بر اساس دسته‌بندی</h3><div id="categoryReport"></div><h3 style="margin-top:18px">اقساط سررسیدشده در ماه</h3><div id="monthInstallments"></div>
+<button class="secondary" id="printReport" type="button">چاپ / ذخیره PDF</button></div>
+</section>
+<section id="settings" class="panel">
+<h2>پشتیبان‌گیری و یادآوری</h2>
+<div class="box">
+<h3>اعلان‌ها</h3><p class="small">مرورگر ممکن است اعلان را فقط پس از اجازه شما نشان دهد؛ در بسیاری از گوشی‌ها، وب‌اپ بسته نمی‌تواند اعلان دقیق و قابل‌اتکا در پس‌زمینه ایجاد کند. اعلان‌های این صفحه هنگام باز بودن برنامه و بررسی سررسیدها کار می‌کنند.</p>
+<div class="actions"><button class="primary" id="enableNotify">فعال‌سازی اجازه اعلان</button><button class="secondary" id="checkDue">بررسی سررسیدها</button></div><p id="notifyStatus" class="small"></p>
+<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+<h3>پشتیبان‌گیری</h3><p class="small">اطلاعات در حافظه همین مرورگر روی همین دستگاه ذخیره می‌شود. پاک‌کردن داده‌های مرورگر یا حذف اطلاعات سایت ممکن است آن را از بین ببرد؛ مرتب فایل پشتیبان بگیر.</p>
+<div class="actions"><button class="primary" id="exportData">دانلود نسخه پشتیبان</button><label class="secondary" style="display:inline-flex;cursor:pointer">بازیابی پشتیبان<input id="importFile" type="file" accept="application/json,.json" hidden></label><button class="danger" id="clearData">حذف همه اطلاعات</button></div>
+</div>
+<div class="box" style="margin-top:12px"><h3>درباره ذخیره‌سازی</h3><p class="small">این نسخه برای استفاده شخصی طراحی شده و داده‌ها به سرور ارسال نمی‌شوند. اگر مرورگر حالت خصوصی باشد یا فضای سایت پاک شود، داده‌ها ممکن است از دست بروند. فایل پشتیبان را در جای امن نگه‌دار.</p></div>
+</section>
+<footer>حساب‌یار · نسخه آزمایشی آفلاین · همه مبالغ به تومان هستند</footer>
+</main>
+<script>
+(()=> {
+const KEY='hesabyar-data-v1';
+let db={expenses:[],incomes:[],loans:[],paid:[]};
+const $=id=>document.getElementById(id);
+const todayISO=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const monthNow=()=>todayISO().slice(0,7);
+const parseDate=s=>new Date(s+'T12:00:00');
+const addDays=(date,n)=>{let d=new Date(date);d.setDate(d.getDate()+n);return d};
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fmt=n=>Number(n||0).toLocaleString('fa-IR')+' تومان';
+const shortDate=s=>s?parseDate(s).toLocaleDateString('fa-IR'):'—';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+function load(){try{let x=JSON.parse(localStorage.getItem(KEY)||'null');if(x)db={...db,...x}}catch(e){alert('خواندن اطلاعات ذخیره‌شده ممکن نشد. اگر نسخه پشتیبان داری، آن را بازیابی کن.')} }
+function save(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function allSchedule(){let out=[];db.loans.forEach(l=>{for(let i=0;i<l.count;i++){let d=parseDate(l.firstDate);if(l.frequency==='monthly')d.setMonth(d.getMonth()+i);else d.setDate(d.getDate()+i*(l.frequency==='weekly'?7:14));let due=iso(d),id=l.id+'_'+i,paid=db.paid.some(p=>p.id===id);out.push({id,loanId:l.id,title:l.title,amount:l.amount,due,paid,remind:Number(l.remind||0),index:i+1,count:l.count})}});return out.sort((a,b)=>a.due.localeCompare(b.due))}
+function sums(month){const incomes=db.incomes.filter(x=>x.date.startsWith(month)).reduce((s,x)=>s+x.amount,0);const expenses=db.expenses.filter(x=>x.date.startsWith(month)).reduce((s,x)=>s+x.amount,0);const paid=allSchedule().filter(x=>x.paid&&x.due.startsWith(month)).reduce((s,x)=>s+x.amount,0);return {incomes,expenses,paid,balance:incomes-expenses-paid}}
+function months(){let set=new Set([monthNow()]);[...db.expenses,...db.incomes].forEach(x=>set.add(x.date.slice(0,7)));allSchedule().forEach(x=>set.add(x.due.slice(0,7)));return [...set].sort().reverse()}
+function fillMonths(){let ms=months();['homeMonth','expenseMonth','incomeMonth','reportMonth'].forEach(id=>{let el=$(id),old=el.value||monthNow();el.innerHTML=ms.map(m=>`<option value="${m}">${esc(m)}</option>`).join('');el.value=ms.includes(old)?old:monthNow()})}
+function itemHTML(x,type){let extra=type==='expense'?`${esc(x.category)} · ${esc(x.method||'')}`:esc(x.category||'');return `<div class="item"><div class="row"><div><div class="item-title">${esc(x.title)}</div><div class="small">${shortDate(x.date)} · ${extra}</div>${x.note?`<div class="small">${esc(x.note)}</div>`:''}</div><div style="text-align:left"><b>${fmt(x.amount)}</b><div><button class="danger" data-delete="${type}:${x.id}">حذف</button></div></div></div></div>`}
+function empty(text){return `<div class="empty">${text}</div>`}
+function renderHome(){let m=$('homeMonth').value||monthNow(),s=sums(m);$('mIncome').textContent=fmt(s.incomes);$('mExpense').textContent=fmt(s.expenses);$('mPaid').textContent=fmt(s.paid);$('mBalance').textContent=fmt(s.balance);
+let sch=allSchedule().filter(x=>!x.paid).filter(x=>x.due>=todayISO()).slice(0,5);
+$('upcoming').innerHTML=sch.length?sch.map(x=>`<div class="item row"><div><b>${esc(x.title)}</b><div class="small">قسط ${x.index} از ${x.count} · ${shortDate(x.due)}</div></div><div><b>${fmt(x.amount)}</b> <button class="secondary" data-pay="${x.id}">پرداخت شد</button></div></div>`).join(''):empty('قسط پرداخت‌نشده‌ای در آینده نزدیک ثبت نشده است.');
+let recent=[...db.expenses.map(x=>({...x,_type:'expense'})),...db.incomes.map(x=>({...x,_type:'income'}))].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+$('recent').innerHTML=recent.length?recent.map(x=>`<div class="item row"><div><b>${esc(x.title)}</b><div class="small">${shortDate(x.date)} · ${x._type==='income'?'درآمد':'هزینه'}</div></div><b>${fmt(x.amount)}</b></div>`).join(''):empty('هنوز چیزی ثبت نشده است.')}
+function renderExpenses(){let m=$('expenseMonth').value||monthNow(),arr=db.expenses.filter(x=>x.date.startsWith(m)).sort((a,b)=>b.date.localeCompare(a.date));$('expenseList').innerHTML=arr.length?arr.map(x=>itemHTML(x,'expense')).join(''):empty('در این ماه هزینه‌ای ثبت نشده است.')}
+function renderIncomes(){let m=$('incomeMonth').value||monthNow(),arr=db.incomes.filter(x=>x.date.startsWith(m)).sort((a,b)=>b.date.localeCompare(a.date));$('incomeList').innerHTML=arr.length?arr.map(x=>itemHTML(x,'income')).join(''):empty('در این ماه درآمدی ثبت نشده است.')}
+function renderLoans(){ $('loanList').innerHTML=db.loans.length?db.loans.map(l=>{let sc=allSchedule().filter(x=>x.loanId===l.id),done=sc.filter(x=>x.paid).length,remaining=sc.filter(x=>!x.paid).length;return `<div class="item"><div class="row"><div><div class="item-title">${esc(l.title)}</div><div class="small">${l.count} قسط · هر قسط ${fmt(l.amount)} · سررسید اول ${shortDate(l.firstDate)}</div><div class="small">پرداخت‌شده: ${done} · باقی‌مانده: ${remaining}</div></div><button class="danger" data-delete="loan:${l.id}">حذف قرارداد</button></div><div class="progress"><span style="width:${100*done/Math.max(1,l.count)}%"></span></div></div>`}).join(''):empty('هنوز قراردادی ثبت نشده است.');
+let sch=allSchedule().filter(x=>!x.paid);$('scheduleList').innerHTML=sch.length?sch.map(x=>`<div class="item row"><div><b>${esc(x.title)}</b><div class="small">قسط ${x.index} از ${x.count} · ${shortDate(x.due)} ${x.due<todayISO()?'<span class="pill late">عقب‌افتاده</span>':x.due===todayISO()?'<span class="pill warn">امروز</span>':''}</div></div><div><b>${fmt(x.amount)}</b><div><button class="secondary" data-pay="${x.id}">ثبت پرداخت</button></div></div></div>`).join(''):empty('همه اقساط ثبت‌شده پرداخت شده‌اند.')}
+function renderReport(){let m=$('reportMonth').value||monthNow(),s=sums(m);$('rIncome').textContent=fmt(s.incomes);$('rExpense').textContent=fmt(s.expenses);$('rPaid').textContent=fmt(s.paid);$('rBalance').textContent=fmt(s.balance);
+let cat={};db.expenses.filter(x=>x.date.startsWith(m)).forEach(x=>cat[x.category]=(cat[x.category]||0)+x.amount);let pairs=Object.entries(cat).sort((a,b)=>b[1]-a[1]);$('categoryReport').innerHTML=pairs.length?pairs.map(([k,v])=>`<div class="item row"><span>${esc(k)}</span><b>${fmt(v)}</b></div>`).join(''):empty('هزینه‌ای برای دسته‌بندی وجود ندارد.');
+let sch=allSchedule().filter(x=>x.due.startsWith(m));$('monthInstallments').innerHTML=sch.length?sch.map(x=>`<div class="item row"><div>${esc(x.title)}<div class="small">${shortDate(x.due)} · قسط ${x.index}</div></div><div><b>${fmt(x.amount)}</b><span class="pill ${x.paid?'':'warn'}">${x.paid?'پرداخت‌شده':'پرداخت‌نشده'}</span></div></div>`).join(''):empty('در این ماه سررسیدی ثبت نشده است.')}
+function render(){fillMonths();renderHome();renderExpenses();renderIncomes();renderLoans();renderReport()}
+function switchTab(id){document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));window.scrollTo({top:0,behavior:'smooth'})}
+$('tabs').addEventListener('click',e=>{let b=e.target.closest('[data-tab]');if(b)switchTab(b.dataset.tab)});
+const setDateDefaults=()=>document.querySelectorAll('input[type=date]').forEach(x=>{if(!x.value)x.value=todayISO()});
+$('expenseForm').addEventListener('submit',e=>{e.preventDefault();let f=new FormData(e.target);db.expenses.push({id:uid(),title:f.get('title').trim(),amount:Number(f.get('amount')),date:f.get('date'),category:f.get('category'),method:f.get('method'),note:f.get('note').trim()});e.target.reset();setDateDefaults();save();switchTab('expense')});
+$('incomeForm').addEventListener('submit',e=>{e.preventDefault();let f=new FormData(e.target);db.incomes.push({id:uid(),title:f.get('title').trim(),amount:Number(f.get('amount')),date:f.get('date'),category:f.get('category'),note:f.get('note').trim()});e.target.reset();setDateDefaults();save();switchTab('income')});
+$('loanForm').addEventListener('submit',e=>{e.preventDefault();let f=new FormData(e.target);db.loans.push({id:uid(),title:f.get('title').trim(),amount:Number(f.get('amount')),count:Number(f.get('count')),firstDate:f.get('firstDate'),frequency:f.get('frequency'),remind:Number(f.get('remind')),note:f.get('note').trim()});e.target.reset();setDateDefaults();save();switchTab('installments')});
+['homeMonth','expenseMonth','incomeMonth','reportMonth'].forEach(id=>$(id).addEventListener('change',()=>{renderHome();renderExpenses();renderIncomes();renderReport()}));
+document.addEventListener('click',e=>{let p=e.target.closest('[data-pay]');if(p){let id=p.dataset.pay;if(!db.paid.some(x=>x.id===id))db.paid.push({id,paidAt:todayISO()});save();return}let d=e.target.closest('[data-delete]');if(d){let [type,id]=d.dataset.delete.split(':');if(!confirm('این مورد حذف شود؟'))return;if(type==='expense')db.expenses=db.expenses.filter(x=>x.id!==id);if(type==='income')db.incomes=db.incomes.filter(x=>x.id!==id);if(type==='loan'){db.loans=db.loans.filter(x=>x.id!==id);db.paid=db.paid.filter(x=>!x.id.startsWith(id+'_'))}save()}});
+$('enableNotify').addEventListener('click',async()=>{if(!('Notification'in window)){$('notifyStatus').textContent='این مرورگر از اعلان وب پشتیبانی نمی‌کند.';return}try{let p=await Notification.requestPermission();$('notifyStatus').textContent=p==='granted'?'اجازه اعلان داده شد. برای بررسی، «بررسی سررسیدها» را بزن.': 'اجازه اعلان داده نشد؛ تنظیمات مرورگر را بررسی کن.'}catch(e){$('notifyStatus').textContent='فعال‌سازی اعلان ممکن نشد.'}});
+function dueCheck(){let sch=allSchedule().filter(x=>!x.paid),now=parseDate(todayISO());let matches=sch.filter(x=>{let diff=Math.round((parseDate(x.due)-now)/86400000);return diff>=0&&diff<=x.remind});let overdue=sch.filter(x=>x.due<todayISO());let msg=[];if(matches.length)msg.push('نزدیک سررسید: '+matches.map(x=>`${x.title} (${shortDate(x.due)}، ${fmt(x.amount)})`).join('؛ '));if(overdue.length)msg.push('عقب‌افتاده: '+overdue.map(x=>`${x.title} (${shortDate(x.due)})`).join('؛ '));if(!msg.length)msg.push('اقساطی برای یادآوری امروز پیدا نشد.');$('notifyStatus').textContent=msg.join(' | ');if('Notification'in window&&Notification.permission==='granted'&&(matches.length||overdue.length)){try{new Notification('یادآوری حساب‌یار',{body:msg.join(' | '),icon:'icon-192.png'})}catch(e){}}return msg.join('\n')}
+$('checkDue').addEventListener('click',dueCheck);
+$('exportData').addEventListener('click',()=>{let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='hesabyar-backup-'+todayISO()+'.json';a.click();URL.revokeObjectURL(url)});
+$('importFile').addEventListener('change',async e=>{let file=e.target.files[0];if(!file)return;try{let x=JSON.parse(await file.text());if(!x||!Array.isArray(x.expenses)||!Array.isArray(x.incomes)||!Array.isArray(x.loans)||!Array.isArray(x.paid))throw Error();if(!confirm('اطلاعات فعلی با نسخه پشتیبان جایگزین شود؟'))return;db=x;save();alert('بازیابی انجام شد.')}catch(err){alert('فایل پشتیبان معتبر نیست.')}e.target.value=''});
+$('clearData').addEventListener('click',()=>{if(confirm('تمام درآمدها، مخارج و اقساط حذف شوند؟ این کار قابل بازگشت نیست.')){db={expenses:[],incomes:[],loans:[],paid:[]};save()}});
+$('printReport').addEventListener('click',()=>window.print());
+window.addEventListener('focus',()=>{dueCheck()});
+load();setDateDefaults();render();
+if('serviceWorker'in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
